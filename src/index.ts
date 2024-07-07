@@ -50,6 +50,9 @@ const asks: Order[] = [];
 
 // Place a limit order
 app.post("/order", (req: any, res: any) => {
+
+    console.log("Bids, ", bids);
+    console.log("Asks, ", asks);
     const side: string = req.body.side;
     const price: number = req.body.price;
     const quantity: number = req.body.quantity;
@@ -131,35 +134,53 @@ app.get("/balance/:userId", (req, res) => {
 })
 
 app.get("/quote", (req: any, res: any) => {
-    const { side, quantity } = req.body;
-    let totalCost = 0;
-    let remainingQuantity = quantity;
+    // Get the best bid price (highest bid)
+    const bestBid = bids.length > 0 ? bids[bids.length - 1].price : 0;
 
-    if (side === 'bid') {
-        const sortedAsks = asks.slice().sort((a, b) => a.price - b.price);
+    // Get the best ask price (lowest ask)
+    const bestAsk = asks.length > 0 ? asks[asks.length - 1].price : Infinity;
 
-        for (let order of sortedAsks) {
-            if (remainingQuantity <= 0) break;
-            const tradeQuantity = Math.min(order.quantity, remainingQuantity);
-            totalCost += tradeQuantity * order.price;
-            remainingQuantity -= tradeQuantity;
-        }
-    } else if (side === 'ask') {
-        const sortedBids = bids.slice().sort((a, b) => b.price - a.price);
-
-        for (let order of sortedBids) {
-            if (remainingQuantity <= 0) break;
-            const tradeQuantity = Math.min(order.quantity, remainingQuantity);
-            totalCost += tradeQuantity * order.price;
-            remainingQuantity -= tradeQuantity;
-        }
+    // Check if valid bid and ask prices were found
+    if (bestBid === 0 || bestAsk === Infinity) {
+        res.status(404).json({ error: "Quote not available" });
+    } else {
+        res.json({
+            ticker: TICKER,
+            bestBid,
+            bestAsk
+        });
     }
 
-    if (remainingQuantity > 0) {
-        return res.status(400).json({ error: 'Not enough liquidity' });
-    }
+    // Another way
+    // const { side, quantity } = req.body;
+    // let totalCost = 0;
+    // let remainingQuantity = quantity;
 
-    res.json({ quote: totalCost });
+    // if (side === 'bid') {
+    //     const sortedAsks = asks.slice().sort((a, b) => a.price - b.price);
+
+    //     for (let order of sortedAsks) {
+    //         if (remainingQuantity <= 0) break;
+    //         const tradeQuantity = Math.min(order.quantity, remainingQuantity);
+    //         totalCost += tradeQuantity * order.price;
+    //         remainingQuantity -= tradeQuantity;
+    //     }
+    // } else if (side === 'ask') {
+    //     const sortedBids = bids.slice().sort((a, b) => b.price - a.price);
+
+    //     for (let order of sortedBids) {
+    //         if (remainingQuantity <= 0) break;
+    //         const tradeQuantity = Math.min(order.quantity, remainingQuantity);
+    //         totalCost += tradeQuantity * order.price;
+    //         remainingQuantity -= tradeQuantity;
+    //     }
+    // }
+
+    // if (remainingQuantity > 0) {
+    //     return res.status(400).json({ error: 'Not enough liquidity' });
+    // }
+
+    // res.json({ quote: totalCost });
 
     // Another way of doing it
     // if (asks.length === 0 || bids.length === 0) {
